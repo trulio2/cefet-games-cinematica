@@ -27,10 +27,12 @@ public class Chegar extends AlgoritmoMovimentacao {
     public Direcionamento guiar(Pose agente) {
         Direcionamento output = new Direcionamento();
         float x,y;
-        x = agente.posicao.x - super.alvo.getObjetivo().x;
-        y = agente.posicao.y - super.alvo.getObjetivo().y;
+        x = super.alvo.getObjetivo().x - agente.posicao.x ;
+        y = super.alvo.getObjetivo().y - agente.posicao.y ;
         Vector3 vel = new Vector3(x,y,0);
         output.velocidade = vel;
+        agente.olharNaDirecaoDaVelocidade(vel);
+        output.rotacao = 0;
         if (output.velocidade.len() < raio){
             return output;
         }
@@ -40,8 +42,6 @@ public class Chegar extends AlgoritmoMovimentacao {
             output.velocidade.scl(maxVelocidade);
         }
         
-        agente.olharNaDirecaoDaVelocidade(vel);
-        output.rotacao = 0;
         
         // calcula que direção tomar (configura um objeto Direcionamento 
         // e o retorna)
