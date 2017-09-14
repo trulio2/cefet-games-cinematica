@@ -3,7 +3,9 @@ package br.cefetmg.games.movement.behavior;
 import br.cefetmg.games.movement.AlgoritmoMovimentacao;
 import br.cefetmg.games.movement.Direcionamento;
 import br.cefetmg.games.movement.Pose;
+
 import com.badlogic.gdx.Input.Keys;
+import com.badlogic.gdx.math.Vector3;
 
 /**
  * Guia o agente na direção do alvo.
@@ -26,7 +28,18 @@ public class Buscar extends AlgoritmoMovimentacao {
     @Override
     public Direcionamento guiar(Pose agente) {
         Direcionamento output = new Direcionamento();
-
+        float x,y,z;
+        x = super.alvo.getObjetivo().x - agente.posicao.x;
+        y = super.alvo.getObjetivo().y - agente.posicao.y;
+        Vector3 vel = new Vector3(x,y,0);
+        vel.nor();
+        vel.scl(maxVelocidade);
+        output.velocidade = vel;
+        agente.olharNaDirecaoDaVelocidade(vel);
+        
+        
+        //output.velocidade.nor();
+                
         // calcula que direção tomar (configura um objeto Direcionamento 
         // e o retorna)
         // ...
