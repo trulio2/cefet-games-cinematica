@@ -6,16 +6,21 @@ import br.cefetmg.games.movement.Pose;
 import com.badlogic.gdx.Input.Keys;
 
 /**
- * Guia o agente de forma a fugir na direção contrária ao alvo.
+ * Guia o agente na direção do alvo.
  *
  * @author Flávio Coutinho <fegemo@cefetmg.br>
  */
-public class Fugir extends AlgoritmoMovimentacao {
+public class Buscar extends AlgoritmoMovimentacao {
 
-    private static final char NOME = 'f';
+    private static final char NOME = 's';
 
-    public Fugir(float maxVelocidade) {
-        super(NOME);
+    public Buscar(float maxVelocidade) {
+        this(NOME, maxVelocidade);
+    }
+
+    protected Buscar(char nome, float maxVelocidade) {
+        super(nome);
+        this.maxVelocidade = maxVelocidade;
     }
 
     @Override
@@ -33,7 +38,6 @@ public class Fugir extends AlgoritmoMovimentacao {
 
     @Override
     public int getTeclaParaAtivacao() {
-        return Keys.F;
+        return Keys.S;
     }
-
 }

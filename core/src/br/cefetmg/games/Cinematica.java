@@ -1,5 +1,6 @@
 package br.cefetmg.games;
 
+import br.cefetmg.games.movement.AlgoritmoMovimentacao;
 import br.cefetmg.games.movement.Agente;
 import br.cefetmg.games.movement.Alvo;
 import br.cefetmg.games.graphics.RenderizadorAgente;
@@ -11,51 +12,43 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input.Buttons;
 import com.badlogic.gdx.Input.Keys;
 import com.badlogic.gdx.InputAdapter;
-import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Circle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
-import java.util.ArrayList;
 import java.util.Iterator;
 
+/**
+ * Classe principal do programa.
+ *
+ * @author Flávio Coutinho <fegemo@cefetmg.br>
+ */
 public class Cinematica extends ApplicationAdapter {
 
     private Viewport viewport;
-    private Camera camera;
-    private ArrayList<Agente> agentes;
+    private OrthographicCamera camera;
+    private BitmapFont fonte;
+    private SpriteBatch batch;
+    private Array<Agente> agentes;
     private RenderizadorAgente renderizador;
     private RenderizadorObjetivo renderizadorObjetivo;
 
     private Alvo objetivo;
-    private Perseguir perseguir;
+    private Buscar buscar;
     private Vagar vagar;
     private Fugir fugir;
-    private Algoritmo algoritmoCorrente;
+    private AlgoritmoMovimentacao algoritmoCorrente;
+    private Array<AlgoritmoMovimentacao> algoritmos;
+    private String stringAlgoritmoCorrente;
 
-    public Vector3 posicaoAleatoria() {
-        Vector3 posicao = new Vector3();
-        posicao.x = camera.viewportWidth * (float) (Math.random() - 0.5f);
-        posicao.y = camera.viewportHeight * (float) (Math.random() - 0.5f);
-        return posicao;
-    }
-
-    public Agente novoAgente(Vector3 posicao) {
-        Agente agente = new Agente(posicao,
-                new Color(
-                        (float) Math.random(),
-                        (float) Math.random(),
-                        (float) Math.random(), 1));
-        agente.pose.orientacao = (float) (Math.random() * Math.PI * 2);
-        agente.defineComportamento(algoritmoCorrente);
-
-        agentes.add(agente);
-        return agente;
-    }
+    private static final float FATOR_ZOOM_A_CADA_SCROLL = 20.0f;
 
     @Override
     public void create() {
@@ -64,23 +57,31 @@ public class Cinematica extends ApplicationAdapter {
                 Gdx.graphics.getWidth(),
                 Gdx.graphics.getHeight());
         viewport = new ScreenViewport(camera);
-        renderizador = new RenderizadorAgente(camera);
+        batch = new SpriteBatch();
+        renderizador = new RenderizadorAgente(camera, batch);
         renderizadorObjetivo = new RenderizadorObjetivo(camera);
+        fonte = new BitmapFont();
 
         // define o objetivo (perseguição, fuga) inicialmente no centro do mundo 
         objetivo = new Alvo(new Vector3(0, 0, 0));
 
-        // comportamentos disponíveis
-        perseguir = new Perseguir(40);
-        perseguir.alvo = objetivo;
+        // configura e registra os comportamentos disponíveis
+        algoritmos = new Array<>();
+        buscar = new Buscar(40);
+        buscar.alvo = objetivo;
         vagar = new Vagar(40, 2);
         fugir = new Fugir(40);
-        fugir.alvo = perseguir.alvo;
+        fugir.alvo = buscar.alvo;
+        algoritmos.add(buscar);
+        algoritmos.add(vagar);
+        algoritmos.add(fugir);
         algoritmoCorrente = vagar;
+        stringAlgoritmoCorrente = "Algoritmo corrente: "
+                + algoritmoCorrente.getNome();
 
-        agentes = new ArrayList<Agente>();
+        agentes = new Array<>();
         Agente agente = novoAgente(posicaoAleatoria());
-        agente.defineComportamento(perseguir);
+        agente.defineComportamento(buscar);
         novoAgente(posicaoAleatoria());
         novoAgente(posicaoAleatoria());
         novoAgente(posicaoAleatoria());
@@ -92,8 +93,8 @@ public class Cinematica extends ApplicationAdapter {
                 Vector3 clique = new Vector3(x, y, 0);
                 viewport.unproject(clique);
 
-                // Botão ESQUERDO: posiciona objetivo no mapa ou em um agente
-                if (button == Buttons.LEFT) {
+                // Botão DIREITO: posiciona objetivo no mapa ou em um agente
+                if (button == Buttons.RIGHT) {
                     boolean definiuObjetivo = false;
 
                     // passo 1: verifica se o clique "acertou" um agente
@@ -111,35 +112,60 @@ public class Cinematica extends ApplicationAdapter {
                     }
                     if (definiuObjetivo) {
                         objetivo.setObjetivo(atual);
-                    } 
-                    // passo 2: se não tiver acertado um agente, define o 
+                    } // passo 2: se não tiver acertado um agente, define o 
                     // objetivo no mapa                    
                     else {
                         objetivo.setObjetivo(clique);
                     }
-                } // Botão DIREITO: novo agente
-                else if (button == Buttons.RIGHT) {
+                } // Botão ESQUERDO: novo agente
+                else if (button == Buttons.LEFT) {
                     novoAgente(clique);
                 }
                 return true;
             }
 
             @Override
+            public boolean scrolled(int quanto) {
+                // faz um zoom na câmera
+                if (camera.zoom + quanto < 0) {
+                    return true;
+                }
+                camera.zoom += quanto / FATOR_ZOOM_A_CADA_SCROLL;
+                camera.update();
+                viewport.setWorldSize(
+                        camera.zoom * camera.viewportWidth,
+                        camera.zoom * camera.viewportHeight);
+                return true;
+            }
+
+            @Override
             public boolean keyUp(int keycode) {
+                // verifica se pressionaram uma tecla referente a um algoritmo
+                // nesse caso, torna ele o algoritmo ativo para se criar novos
+                // agentes
+                for (AlgoritmoMovimentacao algoritmo : algoritmos) {
+                    if (keycode == algoritmo.getTeclaParaAtivacao()) {
+                        algoritmoCorrente = algoritmo;
+                        stringAlgoritmoCorrente = "Algoritmo corrente: "
+                                + algoritmo.getNome();
+                        return true;
+                    }
+                }
+                // teclas gerais
                 switch (keycode) {
-                    case Keys.W:
-                        algoritmoCorrente = vagar;
-                        break;
-                    case Keys.F:
-                        algoritmoCorrente = fugir;
-                        break;
-                    case Keys.S:
-                        algoritmoCorrente = perseguir;
+                    case Keys.ESCAPE:
+                        Gdx.app.exit();
                         break;
                 }
                 return true;
             }
         });
+    }
+
+    @Override
+    public void dispose() {
+        renderizador.dispose();
+        renderizadorObjetivo.dispose();
     }
 
     /**
@@ -160,8 +186,8 @@ public class Cinematica extends ApplicationAdapter {
      * @param agente Agente
      */
     private void revolveCoordenadas(Agente agente) {
-        float larguraMundo = camera.viewportWidth;
-        float alturaMundo = camera.viewportHeight;
+        float larguraMundo = viewport.getWorldWidth();
+        float alturaMundo = viewport.getWorldHeight();
         float larguraMundo_2 = larguraMundo / 2.0f;
         float alturaMundo_2 = alturaMundo / 2.0f;
 
@@ -179,20 +205,17 @@ public class Cinematica extends ApplicationAdapter {
 
     /**
      * Percorre a lista de agentes, atualiando sua lógica de movimentação.
+     *
+     * @param delta tempo desde a última atualização.
      */
-    private void atualizaAgentes() {
-
-        // tempo desde a última atualização
-        float delta = Gdx.graphics.getDeltaTime();
+    private void atualizaAgentes(float delta) {
 
         // percorre a lista de agentes e os atualiza (agente.atualiza)
-        Iterator<Agente> it = agentes.iterator();
-        while (it.hasNext()) {
-            Agente atual = it.next();
+        for (Agente agente : agentes) {
             // atualiza lógica
-            atual.atualiza(delta);
+            agente.atualiza(delta);
             // contém os agentes dentro do mundo
-            revolveCoordenadas(atual);
+            revolveCoordenadas(agente);
         }
     }
 
@@ -207,17 +230,57 @@ public class Cinematica extends ApplicationAdapter {
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         // desenha os agentes
-        Iterator<Agente> it = agentes.iterator();
-        while (it.hasNext()) {
-            renderizador.desenha(it.next());
+        batch.setProjectionMatrix(camera.combined);
+        for (Agente agente : agentes) {
+            renderizador.desenha(agente);
         }
 
         // desenha o objetivo
         renderizadorObjetivo.desenha(objetivo);
 
+        // tempo desde a última atualização
+        float delta = Gdx.graphics.getDeltaTime();
         // atualiza a lógica de movimento dos agentes
-        atualizaAgentes();
+        atualizaAgentes(delta);
 
         renderizadorObjetivo.update(Gdx.graphics.getDeltaTime());
+
+        batch.begin();
+        fonte.draw(batch, stringAlgoritmoCorrente,
+                -viewport.getWorldWidth() / 2, 
+                -viewport.getWorldHeight() / 2 + 15);
+        batch.end();
     }
+
+    /**
+     * Cria um novo agente, com o algoritmo corrente, na posição desejada.
+     *
+     * @param posicao
+     * @return
+     */
+    public Agente novoAgente(Vector3 posicao) {
+        Agente agente = new Agente(posicao,
+                new Color(
+                        (float) Math.random(),
+                        (float) Math.random(),
+                        (float) Math.random(), 1));
+        agente.pose.orientacao = (float) (Math.random() * Math.PI * 2);
+        agente.defineComportamento(algoritmoCorrente);
+
+        agentes.add(agente);
+        return agente;
+    }
+
+    /**
+     * Retorna uma posição aleatória dentro da tela.
+     *
+     * @return
+     */
+    private Vector3 posicaoAleatoria() {
+        Vector3 posicao = new Vector3();
+        posicao.x = camera.viewportWidth * (float) (Math.random() - 0.5f);
+        posicao.y = camera.viewportHeight * (float) (Math.random() - 0.5f);
+        return posicao;
+    }
+
 }

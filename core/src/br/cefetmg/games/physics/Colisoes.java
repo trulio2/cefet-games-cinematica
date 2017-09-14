@@ -6,7 +6,7 @@ import com.badlogic.gdx.math.Vector3;
 
 /**
  *
- * @author fegemo <coutinho@decom.cefetmg.br>
+ * @author fegemo <coutinho@cefetmg.br>
  */
 public class Colisoes {
     public static final boolean colideCom(Circle circulo, Vector3 ponto) {

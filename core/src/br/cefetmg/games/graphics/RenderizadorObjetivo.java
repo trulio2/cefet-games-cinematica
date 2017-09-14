@@ -8,7 +8,7 @@ import com.badlogic.gdx.math.MathUtils;
 
 /**
  *
- * @author Flávio Coutinho <fegemo@gmail.com>
+ * @author Flávio Coutinho <fegemo@cefetmg.br>
  */
 public class RenderizadorObjetivo {
     
@@ -40,5 +40,9 @@ public class RenderizadorObjetivo {
         shapeRenderer.rect(-3, -3, 6, 6);
         shapeRenderer.identity();
         shapeRenderer.end();
+    }
+
+    public void dispose() {
+        shapeRenderer.dispose();
     }
 }

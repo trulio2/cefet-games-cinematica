@@ -6,7 +6,7 @@ import com.badlogic.gdx.math.Vector3;
  * Representa um objetivo, que pode ser uma posição no mapa ou um agente (e.g.,
  * sendo perseguido).
  *
- * @author Flávio Coutinho <fegemo@gmail.com>
+ * @author Flávio Coutinho <fegemo@cefetmg.br>
  */
 public class Alvo {
 

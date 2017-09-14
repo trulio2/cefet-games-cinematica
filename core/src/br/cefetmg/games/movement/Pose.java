@@ -4,7 +4,7 @@ import com.badlogic.gdx.math.Vector3;
 
 /**
  *
- * @author Flávio Coutinho
+ * @author Flávio Coutinho <fegemo@cefetmg.br>
  */
 public class Pose {
 
@@ -30,7 +30,9 @@ public class Pose {
      * @return um vetor na mesma direção que o ângulo.
      */
     public Vector3 getOrientacaoComoVetor() {
-        return new Vector3((float) Math.cos(orientacao), (float) Math.sin(orientacao), 0);
+        return new Vector3(
+                (float) Math.cos(orientacao),
+                (float) Math.sin(orientacao), 0);
     }
 
     /**
@@ -45,10 +47,13 @@ public class Pose {
         }
     }
 
-    public void integra(Direcionamento guia, float delta) {
-        posicao.x += guia.velocidade.x * delta;
-        posicao.y += guia.velocidade.y * delta;
-        posicao.z += guia.velocidade.z * delta;
+    public void atualiza(Direcionamento guia, float delta) {
+        // em vez de usar as componentes (ficar "sujando as mãos"), sempre
+        // prefira programar de forma encapsulada ;)
+        posicao.add(guia.velocidade.scl(delta));
+//        posicao.x += guia.velocidade.x * delta;
+//        posicao.y += guia.velocidade.y * delta;
+//        posicao.z += guia.velocidade.z * delta;
         orientacao += guia.rotacao * delta;
         orientacao = orientacao % ((float) Math.PI * 2);
     }
